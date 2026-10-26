@@ -539,6 +539,7 @@ public class WorkGiver_HaulToInventory : WorkGiver_HaulGeneral
 		// If we have any remaining items we need to store, we need to look for a new location to store this item.
 		while (remaining > 0)
 		{
+			// this customized variant skips cells/things which have been matched before as such any returned values are unique, but this is not per-type so later haulables can be under-delivered
 			if (TryFindBestBetterStorageFor(nextThing, pawn, map, currentPriority, pawn.Faction, out var nextStoreCell, out var nextHaulDestination, out var innerInteractableThingOwner))
 			{
 				if (innerInteractableThingOwner is null)
