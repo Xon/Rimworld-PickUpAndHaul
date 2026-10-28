@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using PickUpAndHaul.Deliveries;
+using System.Linq;
 
 namespace PickUpAndHaul;
 public class JobDriver_HaulToInventory : JobDriver
@@ -97,7 +98,7 @@ public class JobDriver_HaulToInventory : JobDriver
 			debugName = nameof(FindMoreToHaul),
 			initAction = () =>
 			{
-				var haulables = WorkGiver_HaulToInventory.SortedHaulables(pawn);
+				var haulables = DeliveryPlanner.SortedHaulables(pawn);
 
 				Job haulMoreJob = null;
 				var haulMoreThing = WorkGiver_HaulToInventory.GetClosestAndRemove(pawn.Position, pawn.Map, haulables, PathEndMode.ClosestTouch,
