@@ -73,16 +73,16 @@ public class DeliveryPlanner(Map map)
 		return false;
 	}
 
-	public bool TryFindBestBetterStorageFor(Thing t, Pawn carrier, Map map, StoragePriority currentPriority, Faction faction, out IntVec3 foundCell, out IHaulDestination haulDestination, out ThingOwner innerInteractableThingOwner)
+	public bool TryFindBestBetterStorageFor(Thing t, Pawn carrier, StoragePriority currentPriority, Faction faction, out IntVec3 foundCell, out IHaulDestination haulDestination, out ThingOwner innerInteractableThingOwner)
 	{
 		var storagePriority = StoragePriority.Unstored;
 		innerInteractableThingOwner = null;
-		if (TryFindBestBetterStoreCellFor(t, carrier, map, currentPriority, faction, out var foundCell2))
+		if (TryFindBestBetterStoreCellFor(t, carrier, currentPriority, faction, out var foundCell2))
 		{
 			storagePriority = foundCell2.GetSlotGroup(map).Settings.Priority;
 		}
 
-		if (!TryFindBestBetterNonSlotGroupStorageFor(t, carrier, map, currentPriority, faction, out var haulDestination2))
+		if (!TryFindBestBetterNonSlotGroupStorageFor(t, carrier, currentPriority, faction, out var haulDestination2))
 		{
 			haulDestination2 = null;
 		}
@@ -121,7 +121,7 @@ public class DeliveryPlanner(Map map)
 		return true;
 	}
 
-	private bool TryFindBestBetterStoreCellFor(Thing thing, Pawn carrier, Map map, StoragePriority currentPriority, Faction faction, out IntVec3 foundCell)
+	private bool TryFindBestBetterStoreCellFor(Thing thing, Pawn carrier, StoragePriority currentPriority, Faction faction, out IntVec3 foundCell)
 	{
 		var haulDestinations = map.haulDestinationManager.AllGroupsListInPriorityOrder;
 		for (var i = 0; i < haulDestinations.Count; i++)
@@ -156,7 +156,7 @@ public class DeliveryPlanner(Map map)
 		return false;
 	}
 
-	private bool TryFindBestBetterNonSlotGroupStorageFor(Thing t, Pawn carrier, Map map, StoragePriority currentPriority, Faction faction, out IHaulDestination haulDestination, bool acceptSamePriority = false)
+	private bool TryFindBestBetterNonSlotGroupStorageFor(Thing t, Pawn carrier, StoragePriority currentPriority, Faction faction, out IHaulDestination haulDestination, bool acceptSamePriority = false)
 	{
 		var allHaulDestinationsListInPriorityOrder = map.haulDestinationManager.AllHaulDestinationsListInPriorityOrder;
 		var intVec = t.SpawnedOrAnyParentSpawned ? t.PositionHeld : carrier.PositionHeld;

@@ -116,16 +116,8 @@ public partial class WorkGiver_HaulToInventory : WorkGiver_HaulGeneral
 		Log.Message($"------------------------------------------------------------------");//different size so the log doesn't count it 2x
 		Log.Message($"{pawn} job found to haul: {thing} to {storeTarget}:{capacityStoreCell}, looking for more now");
 
-		//Find what fits in inventory, set nextThingLeftOverCount to be
-		var nextThingLeftOverCount = 0;
-		var encumberance = MassUtility.EncumbrancePercent(pawn);
 
-		var ceOverweight = false;
-
-		if (ModCompatibilityCheck.CombatExtendedIsActive)
-		{
-			ceOverweight = CompatHelper.CeOverweight(pawn);
-		}
+		var virtualInventory = new PawnVirtualInventory(pawn);
 
 		var distanceToHaul = (storeTarget.Cell - thing.Position).LengthHorizontal * SEARCH_FOR_OTHERS_RANGE_FRACTION;
 		var distanceToSearchMore = Math.Max(MAX_SEARCH_RANGE, distanceToHaul);
@@ -147,29 +139,21 @@ public partial class WorkGiver_HaulToInventory : WorkGiver_HaulGeneral
 			&& GoodThingToHaul(t, pawn) && HaulAIUtility.PawnCanAutomaticallyHaulFast(pawn, t, false); //forced is false, may differ from first thing
 
 		var traverseParms = TraverseParms.For(pawn);
-
 		do
 		{
-			if (AllocateThingAtCell2(planner, pawn, nextThing))
+			if (!virtualInventory.ThingDefsToSkip.Contains(nextThing.def)
+			    && ScheduleDeliveryFor(planner, virtualInventory, nextThing))
 			{
 				lastThing = nextThing;
-				encumberance += AddedEncumberance(pawn, nextThing);
-
-				if (encumberance > 1 || ceOverweight)
-				{
-					//can't CountToPickUpUntilOverEncumbered here, pawn doesn't actually hold these things yet
-					nextThingLeftOverCount = CountPastCapacity(pawn, nextThing, encumberance);
-					Log.Message($"{pawn} Inventory allocated, will carry {nextThing}:{nextThingLeftOverCount}");
-					planner.countQueue.Pop();
-					planner.countQueue.Add(nextThingLeftOverCount);
-
-					// We are now out of inventory space - and should bail right away.
-					break;
-				}
 			}
-		}
-		while ((nextThing = GetClosestAndRemove(lastThing.Position, map, haulables, PathEndMode.ClosestTouch,
-			       traverseParms, distanceToSearchMore, Validator)) != null);
+
+			// unlikely for the inventory to be perfectly packed, but if so stop looking for new things to pickup
+			if (virtualInventory.IsOverEncumbered())
+			{
+				break;
+			}
+		} while ((nextThing = GetClosestAndRemove(lastThing.Position, map, haulables, PathEndMode.ClosestTouch,
+			         traverseParms, distanceToSearchMore, Validator)) != null);
 
 		if (planner.HasJob())
 		{
@@ -229,101 +213,83 @@ public partial class WorkGiver_HaulToInventory : WorkGiver_HaulGeneral
 		return null;
 	}
 
-	public static bool AllocateThingAtCell2(DeliveryPlanner deliveryPlanner, Pawn pawn, Thing nextThing)
-				{
-		var map = pawn.Map;
-		var storeCellCapacity = deliveryPlanner.StoreCellCapacity;
-		var allocation = storeCellCapacity.FirstOrDefault(kvp =>
-			kvp.Key is var storeTarget
-			&& (storeTarget.Container?.TryGetInnerInteractableThingOwner().CanAcceptAnyOf(nextThing)
-			?? storeTarget.Cell.GetSlotGroup(map).parent.Accepts(nextThing))
-			&& deliveryPlanner.Stackable(nextThing, kvp));
-		var storeCell = allocation.Key;
-
-		var currentPriority = StoreUtility.CurrentStoragePriorityOf(nextThing);
-
-		//Can't stack with allocated cells, find a new cell:
-		if (storeCell == default)
+	public static bool ScheduleDeliveryFor(DeliveryPlanner deliveryPlanner, PawnVirtualInventory inventory, Thing thing)
+	{
+		var countToPickupRequest = inventory.CountToPickUpUntilOverEncumbered(thing);
+		if (countToPickupRequest <= 0)
 		{
-			if (deliveryPlanner.TryFindBestBetterStorageFor(nextThing, pawn, map, currentPriority, pawn.Faction, out var nextStoreCell, out var haulDestination, out var innerInteractableThingOwner))
-			{
-				if (innerInteractableThingOwner is null)
-				{
-					storeCell = new(nextStoreCell, null);
-					deliveryPlanner.targetQueueB.Add(nextStoreCell);
+			// this thingDef can't be added at all, so skip over attempting deliveries but keep checking for things without that def
+			inventory.ThingDefsToSkip.Add(thing.def);
 
-					storeCellCapacity[storeCell] = new(nextStoreCell, map);
-					Log.Message($"{pawn} New cell for {nextThing} = {nextStoreCell}");
-				}
-				else
-				{
-					var destinationAsThing = (Thing)haulDestination;
-					storeCell = new(destinationAsThing.Position, destinationAsThing);
-					deliveryPlanner.targetQueueB.Add(destinationAsThing);
-
-					storeCellCapacity[storeCell] = new(innerInteractableThingOwner);
-					Log.Message($"{pawn} New haulDestination for {nextThing} = {haulDestination}");
-				}
-			}
-			else
-			{
-				Log.Message($"{pawn} can not find a destination for {nextThing}");
-
-				return false;
-			}
+			return false;
 		}
 
-		deliveryPlanner.targetQueueA.Add(nextThing);
-		var count = nextThing.stackCount;
-		Log.Message($"{pawn} allocating {nextThing}:{count}");
-
-		var remaining = storeCellCapacity[storeCell].TryStoreThing(nextThing, count);
-		Log.Message($"{pawn} allocated {nextThing}:{count - remaining} in {storeCell}");
-
-		// If we have any remaining items we need to store, we need to look for a new location to store this item.
-		while (remaining > 0)
+		var countToPickup = countToPickupRequest;
+		var currentPriority = StoreUtility.CurrentStoragePriorityOf(thing);
+		while (countToPickup > 0)
 		{
-			// this customized variant skips cells/things which have been matched before as such any returned values are unique, but this is not per-type so later haulables can be under-delivered
-			if (deliveryPlanner.TryFindBestBetterStorageFor(nextThing, pawn, map, currentPriority, pawn.Faction, out var nextStoreCell, out var nextHaulDestination, out var innerInteractableThingOwner))
+			if (!ScheduleDeliveryFor(deliveryPlanner, inventory.Pawn, currentPriority, thing, countToPickup, out var pickedUpCount, out var deliveryTarget))
 			{
-				if (innerInteractableThingOwner is null)
-				{
-					storeCell = new(nextStoreCell, null);
-					deliveryPlanner.targetQueueB.Add(nextStoreCell);
-
-					storeCellCapacity[storeCell] = new(nextStoreCell, map);
-					Log.Message($"{pawn} found new cell for {nextThing}:{remaining} at {nextStoreCell} (extra)");
-				}
-				else
-				{
-					var destinationAsThing = (Thing)nextHaulDestination;
-					storeCell = new(destinationAsThing.Position, destinationAsThing);
-					deliveryPlanner.targetQueueB.Add(destinationAsThing);
-
-					storeCellCapacity[storeCell] = new(innerInteractableThingOwner);
-					Log.Message($"{pawn} found new haulDestination for {nextThing}:{remaining} at {storeCell.Cell} (extra)");
-				}
-
-				var beforeCount = remaining;
-				remaining = storeCellCapacity[storeCell].TryStoreThing(nextThing, remaining);
-				Log.Message($"{pawn} allocated another {nextThing}:{beforeCount - remaining} in {storeCell}");
+				break;
 			}
-			else
-			{
-				// We were able to haul `count - remaining`.
-				deliveryPlanner.countQueue.Add(count - remaining);
-				Log.Message($"{pawn} could not find a place to store {nextThing.def.LabelCap}, was able to store {nextThing}:{count - remaining}");
-				return false;
-			}
+
+			Log.Message($"{inventory.Pawn} will pickup {thing}:{pickedUpCount} from {thing.Position} and deliver to {deliveryTarget}");
+			inventory.AddToInventory(thing, pickedUpCount, deliveryTarget);
+			countToPickup -= pickedUpCount;
 		}
-		deliveryPlanner.countQueue.Add(count);
-		Log.Message($"{pawn} {nextThing}:{count} allocated");
-		return true;
+
+		return countToPickup < countToPickupRequest;
 	}
 
-	public static float AddedEncumberance(Pawn pawn, Thing thing)
-		=> thing.stackCount * thing.GetStatValue(StatDefOf.Mass) / MassUtility.Capacity(pawn);
+	public static bool ScheduleDeliveryFor(DeliveryPlanner deliveryPlanner, Pawn pawn, StoragePriority currentPriority, Thing thing, int count, out int deliveredCount, out Deliveries.StoreTarget deliveryTarget)
+	{
+		// this customized variant skips cells/things which have been matched before as such any returned values are unique, but this is not per-type so later haulables can be under-delivered
+		if (deliveryPlanner.TryFindBestBetterStorageFor(thing, pawn, currentPriority, pawn.Faction, out var nextStoreCell, out var haulDestination, out var innerInteractableThingOwner))
+		{
+			if (innerInteractableThingOwner is null)
+			{
+				deliveryTarget = new Deliveries.StoreTarget(nextStoreCell, null);
+				if (!deliveryPlanner.StoreCellCapacity.ContainsKey(deliveryTarget))
+				{
+					deliveryPlanner.StoreCellCapacity[deliveryTarget] = new Deliveries.CellAllocation(nextStoreCell, pawn.Map);
+					Log.Message($"{pawn} New cell for {thing} = {nextStoreCell}");
+				}
+			}
+			else
+			{
+				var destinationAsThing = (Thing)haulDestination;
+				deliveryTarget = new Deliveries.StoreTarget(destinationAsThing.Position, destinationAsThing);
+				if (!deliveryPlanner.StoreCellCapacity.ContainsKey(deliveryTarget))
+				{
+					deliveryPlanner.StoreCellCapacity[deliveryTarget] = new Deliveries.CellAllocation(innerInteractableThingOwner);
+					Log.Message($"{pawn} New haulDestination for {thing} = {haulDestination}");
+				}
+			}
+		}
+		else
+		{
+			Log.Message($"{pawn} can not find a destination for {thing}");
 
-	public static int CountPastCapacity(Pawn pawn, Thing thing, float encumberance)
-		=> (int)Math.Ceiling((encumberance - 1) * MassUtility.Capacity(pawn) / thing.GetStatValue(StatDefOf.Mass));
+			deliveredCount = 0;
+			deliveryTarget = default;
+			return false;
+		}
+
+		Log.Message($"{pawn} allocating {thing}:{count}");
+		var remaining = deliveryPlanner.StoreCellCapacity[deliveryTarget].TryStoreThing(thing, count);
+		deliveredCount = count - remaining;
+		if (deliveredCount > 0)
+		{
+			Log.Message($"{pawn} allocated {thing}:{count - remaining} in {deliveryTarget}");
+			deliveryPlanner.targetQueueB.Add(nextStoreCell);
+			deliveryPlanner.targetQueueA.Add(thing);
+			deliveryPlanner.countQueue.Add(count);
+
+			return true;
+		}
+
+		Log.Message($"{pawn} can not store any {thing}:{count} in {deliveryTarget}");
+
+		return false;
+	}
 }

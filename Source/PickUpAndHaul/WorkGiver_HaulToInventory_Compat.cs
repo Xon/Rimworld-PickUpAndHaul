@@ -67,4 +67,12 @@ public partial class WorkGiver_HaulToInventory
 	{
 		return false;
 	}
+
+	[Obsolete]
+	public static float AddedEncumberance(Pawn pawn, Thing thing)
+		=> thing.stackCount * thing.GetStatValue(StatDefOf.Mass) / MassUtility.Capacity(pawn);
+
+	[Obsolete]
+	public static int CountPastCapacity(Pawn pawn, Thing thing, float encumberance)
+		=> (int)Math.Ceiling((encumberance - 1) * MassUtility.Capacity(pawn) / thing.GetStatValue(StatDefOf.Mass));
 }
