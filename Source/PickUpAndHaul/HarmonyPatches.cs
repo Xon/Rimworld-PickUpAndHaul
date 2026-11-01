@@ -11,6 +11,7 @@ static class HarmonyPatches
 	private static readonly PropertyInfo p_StashInsteadOfDropOnNewJob = AccessTools.Property(typeof(Settings), nameof(Settings.StashInsteadOfDropOnNewJob));
 	private static readonly PropertyInfo p_StashOnHarvest = AccessTools.Property(typeof(Settings), nameof(Settings.StashOnHarvest));
 	private static readonly PropertyInfo p_StashOnRecipeFinish = AccessTools.Property(typeof(Settings), nameof(Settings.StashOnRecipeFinish));
+	private static readonly PropertyInfo p_StashOnMiningFinish = AccessTools.Property(typeof(Settings), nameof(Settings.StashOnMiningFinish));
 
 	public static readonly List<(Type, string, PropertyInfo)> knownMethodsWhichTriggerCarryDrops =
 	[
@@ -39,6 +40,8 @@ static class HarmonyPatches
 		(typeof(JobDriver_PlantWork), nameof(JobDriver_PlantWork.MakeNewToils), p_StashOnHarvest),
 		// recipe bills with "drop on floor" completion mode
 		(typeof(Toils_Recipe), nameof(Toils_Recipe.FinishRecipeAndStartStoringProduct), p_StashOnRecipeFinish),
+		// mining results
+		(typeof(Mineable), nameof(Mineable.TrySpawnYield), p_StashOnMiningFinish),
 	];
 
 	static HarmonyPatches()
@@ -453,10 +456,20 @@ static class HarmonyPatches
 			yield break;
 		}
 
+
+		var param = original.GetParameters().FirstOrFallback(p => p.Name.ToLower() == "pawn" && p.ParameterType == typeof(Pawn));
+		if (param != null)
+		{
+			yield return FishTranspiler.Argument(param.Position + (original.IsStatic ? 0 : 1));
+			yield return FishTranspiler.Call(replacementMethod);
+			yield break;
+		}
+
 		var variables = original.GetMethodBody()?.LocalVariables;
 		if (variables == null || variables.Count == 0 || variables[0].LocalType != typeof(Pawn))
 		{
 			Verse.Log.Error($"{original.DeclaringType}:{original} method is not on a subclass of {typeof(JobDriver)} or the 1st local variable is not a {typeof(Pawn)}");
+			yield return instruction;
 			yield break;
 		}
 

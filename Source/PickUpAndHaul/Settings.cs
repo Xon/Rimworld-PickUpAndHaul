@@ -10,6 +10,7 @@ public class Settings : ModSettings
 	private static bool _stashInsteadOfDropOnNewJob = true;
 	private static bool _stashOnHarvest = true;
 	private static bool _stashOnRecipeFinish = true;
+	private static bool _stashOnMiningFinish = true;
 	private static float _maximumOccupiedCapacityToConsiderHauling = 0.8f;
 
 	public static bool AllowCorpses => _allowCorpses;
@@ -20,6 +21,7 @@ public class Settings : ModSettings
 	public static bool StashInsteadOfDropOnNewJob => _stashInsteadOfDropOnNewJob;
 	public static bool StashOnHarvest => _stashOnHarvest;
 	public static bool StashOnRecipeFinish => _stashOnRecipeFinish;
+	public static bool StashOnMiningFinish => _stashOnMiningFinish;
 	public static float MaximumOccupiedCapacityToConsiderHauling => _maximumOccupiedCapacityToConsiderHauling;
 
 	public static bool IsAllowedRace(RaceProperties props) => props.Humanlike || (AllowAnimals && props.Animal) || (AllowMechanoids && props.IsMechanoid);
@@ -36,6 +38,7 @@ public class Settings : ModSettings
 		ls.CheckboxLabeled("PUAH.stashInsteadOfDropOnNewJob".Translate(), ref _stashInsteadOfDropOnNewJob, "PUAH.stashInsteadOfDropOnNewJobTooltip".Translate());
 		ls.CheckboxLabeled("PUAH.stashOnHarvest".Translate(), ref _stashOnHarvest, "PUAH.stashOnHarvestTooltip".Translate());
 		ls.CheckboxLabeled("PUAH.stashOnRecipeFinish".Translate(), ref _stashOnRecipeFinish, "PUAH.stashOnRecipeFinishTooltip".Translate());
+		ls.CheckboxLabeled("PUAH.stashOnMiningFinish".Translate(), ref _stashOnMiningFinish, "PUAH.stashOnMiningFinishTooltip".Translate());
 		var minimumFreeInventorySpace = (float)Math.Round((1 - _maximumOccupiedCapacityToConsiderHauling) * 100f);
 		var previousAlignment = Text.Anchor;
 		Text.Anchor = TextAnchor.MiddleRight;
@@ -62,6 +65,7 @@ public class Settings : ModSettings
 		Scribe_Values.Look(ref _stashInsteadOfDropOnNewJob, "stashInsteadOfDropOnNewJob", true);
 		Scribe_Values.Look(ref _stashOnHarvest, "stashOnHarvest", true);
 		Scribe_Values.Look(ref _stashOnRecipeFinish, "stashOnRecipeFinish", true);
+		Scribe_Values.Look(ref _stashOnMiningFinish, "stashOnMiningFinish", true);
 		Scribe_Values.Look(ref _maximumOccupiedCapacityToConsiderHauling, "maximumOccupiedCapacityToConsiderHauling", 0.8f);
 	}
 }
