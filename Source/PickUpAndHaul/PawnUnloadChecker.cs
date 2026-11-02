@@ -6,56 +6,59 @@ public static class PawnUnloadChecker
 	public static float EmptyEncumbrancePercent = 0.9f;
 	public static float EmptyTicksForRotables = 3000;
 
-	public static bool isAutoUnloadInventoryAllowed(this Pawn pawn)
+	extension(Pawn pawn)
 	{
-		return pawn.Faction == Faction.OfPlayerSilentFail
-		       && Settings.IsAllowedRace(pawn.RaceProps)
-		       && pawn.inventory.innerContainer != null
-		       && pawn.inventory.innerContainer.Count != 0;
-	}
-
-	public static void CheckIfPawnShouldUnloadInventory(this Pawn pawn, bool forced = false)
-	{
-		if (pawn == null || !pawn.isAutoUnloadInventoryAllowed())
+		public bool isAutoUnloadInventoryAllowed()
 		{
-			return;
+			return pawn.Faction == Faction.OfPlayerSilentFail
+			       && Settings.IsAllowedRace(pawn.RaceProps)
+			       && pawn.inventory.innerContainer != null
+			       && pawn.inventory.innerContainer.Count != 0;
 		}
 
-		var itemsTakenToInventory = pawn.HauledToInventoryComp();
-		if (itemsTakenToInventory == null || itemsTakenToInventory.IsEmpty())
+		public void CheckIfPawnShouldUnloadInventory(bool forced = false)
 		{
-			return;
-		}
-
-		// Multiplayer: MakeJob consumes a unique job ID, so it must only run when the pawn really has hauled items to unload.
-		if (forced || MassUtility.EncumbrancePercent(pawn) >= EmptyEncumbrancePercent)
-		{
-			var job = JobMaker.MakeJob(JobDefOfs.UnloadYourHauledInventory, pawn);
-			if (job.TryMakePreToilReservations(pawn, false))
+			if (pawn == null || !pawn.isAutoUnloadInventoryAllowed())
 			{
+				return;
+			}
+
+			var itemsTakenToInventory = pawn.HauledToInventoryComp();
+			if (itemsTakenToInventory == null || itemsTakenToInventory.IsEmpty())
+			{
+				return;
+			}
+
+			// Multiplayer: MakeJob consumes a unique job ID, so it must only run when the pawn really has hauled items to unload.
+			if (forced || MassUtility.EncumbrancePercent(pawn) >= EmptyEncumbrancePercent)
+			{
+				var job = JobMaker.MakeJob(JobDefOfs.UnloadYourHauledInventory, pawn);
+				if (job.TryMakePreToilReservations(pawn, false))
+				{
+					pawn.jobs.jobQueue.EnqueueFirst(job, JobTag.Misc);
+					return;
+				}
+			}
+
+			foreach (var thing in pawn.inventory.innerContainer)
+			{
+				var compRottable = thing.TryGetComp<CompRottable>();
+				if (!(compRottable?.TicksUntilRotAtCurrentTemp < EmptyTicksForRotables))
+				{
+					continue;
+				}
+
+				var job = JobMaker.MakeJob(JobDefOfs.UnloadYourHauledInventory, pawn);
 				pawn.jobs.jobQueue.EnqueueFirst(job, JobTag.Misc);
 				return;
 			}
-		}
 
-		foreach (var thing in pawn.inventory.innerContainer)
-		{
-			var compRottable = thing.TryGetComp<CompRottable>();
-			if (!(compRottable?.TicksUntilRotAtCurrentTemp < EmptyTicksForRotables))
+			if (Find.TickManager.TicksGame % 50 == 0 && pawn.inventory.innerContainer.Count < itemsTakenToInventory.GetHashSet().Count)
 			{
-				continue;
+				Verse.Log.Warning($"[PickUpAndHaul] {pawn} inventory was found out of sync with haul index. Pawn will drop their inventory.");
+				itemsTakenToInventory.Clear();
+				pawn.inventory.UnloadEverything = true;
 			}
-
-			var job = JobMaker.MakeJob(JobDefOfs.UnloadYourHauledInventory, pawn);
-			pawn.jobs.jobQueue.EnqueueFirst(job, JobTag.Misc);
-			return;
-		}
-
-		if (Find.TickManager.TicksGame % 50 == 0 && pawn.inventory.innerContainer.Count < itemsTakenToInventory.GetHashSet().Count)
-		{
-			Verse.Log.Warning($"[PickUpAndHaul] {pawn} inventory was found out of sync with haul index. Pawn will drop their inventory.");
-			itemsTakenToInventory.Clear();
-			pawn.inventory.UnloadEverything = true;
 		}
 	}
 }
