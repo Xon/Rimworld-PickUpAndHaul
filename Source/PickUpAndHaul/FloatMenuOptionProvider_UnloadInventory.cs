@@ -8,6 +8,7 @@ public class FloatMenuOptionProvider_UnloadInventory: FloatMenuOptionProvider
 	public override bool Undrafted => true;
 	public override bool Multiselect => true;
 	public override bool RequiresManipulation => true;
+	public override bool MechanoidCanDo => true;
 
 	public override FloatMenuOption GetSingleOption(FloatMenuContext context)
 	{
