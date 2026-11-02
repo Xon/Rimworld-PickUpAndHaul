@@ -16,7 +16,7 @@ public class JobDriver_HaulToInventory : JobDriver
 	{
 		var wait = Toils_General.Wait(2);
 
-		var pruneQueue = Toils_JobTransforms.ClearDespawnedNullOrForbiddenQueuedTargets(TargetIndex.A);
+		var pruneQueue = PruneQueue(TargetIndex.A);
 		yield return pruneQueue;
 		yield return Toils_JobTransforms.ExtractNextTargetFromQueue(TargetIndex.A); //also does count
 
@@ -38,6 +38,37 @@ public class JobDriver_HaulToInventory : JobDriver
 
 		yield return NextJob();
 		yield return wait;
+	}
+
+	protected Toil PruneQueue(TargetIndex ind)
+	{
+		return new Toil
+		{
+			debugName = nameof(PruneQueue),
+			initAction = () =>
+			{
+				var targets = job.targetQueueA;
+				if (targets == null)
+				{
+					return;
+				}
+
+				for (var i = targets.Count - 1; i >= 0; i--)
+				{
+					var ta = targets[i];
+					if (!ta.HasThing || !ta.Thing.Spawned || ta.Thing.IsForbidden(pawn))
+					{
+						continue;
+					}
+
+					targets.RemoveAt(i);
+					if (job.countQueue.Count > i)
+					{
+						job.countQueue.RemoveAt(i);
+					}
+				}
+			},
+		};
 	}
 
 	protected Toil GotoThing()
