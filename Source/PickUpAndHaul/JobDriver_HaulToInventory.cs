@@ -56,7 +56,7 @@ public class JobDriver_HaulToInventory : JobDriver
 				for (var i = targets.Count - 1; i >= 0; i--)
 				{
 					var ta = targets[i];
-					if (!ta.HasThing || !ta.Thing.Spawned || ta.Thing.IsForbidden(pawn))
+					if (!ta.HasThing || !ta.Thing.Spawned || ta.Thing.IsForbidden(pawn) || !pawn.HasReserved(ta.Thing, job))
 					{
 						continue;
 					}
