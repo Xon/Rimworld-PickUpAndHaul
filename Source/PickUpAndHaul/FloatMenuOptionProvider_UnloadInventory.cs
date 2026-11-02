@@ -1,6 +1,5 @@
 ﻿namespace PickUpAndHaul;
 
-
 public class FloatMenuOptionProvider_UnloadInventory: FloatMenuOptionProvider
 {
 	// Publicizer causes these to be public
@@ -10,12 +9,23 @@ public class FloatMenuOptionProvider_UnloadInventory: FloatMenuOptionProvider
 	public override bool RequiresManipulation => true;
 	public override bool MechanoidCanDo => true;
 
+	public override bool SelectedPawnValid(Pawn pawn, FloatMenuContext context)
+	{
+		return base.SelectedPawnValid(pawn, context) && pawn.isAutoUnloadInventoryAllowed() && !(pawn.HauledToInventoryComp()?.IsEmpty() ?? true);
+	}
+
 	public override FloatMenuOption GetSingleOption(FloatMenuContext context)
 	{
-		var hasInventoryToUnload = false;
-		foreach (var pawn in context.ValidSelectedPawns)
+		var pawnsWithPendingUnloads = new HashSet<Pawn>(context.ValidSelectedPawns);
+		if (pawnsWithPendingUnloads.Count == 0)
 		{
-			if (!pawn.isAutoUnloadInventoryAllowed() || (pawn.HauledToInventoryComp()?.IsEmpty() ?? true))
+			return null;
+		}
+
+		var hasInventoryToUnload = false;
+		foreach (var pawn in context.ClickedPawns)
+		{
+			if (!pawnsWithPendingUnloads.Contains(pawn))
 			{
 				continue;
 			}
@@ -30,9 +40,10 @@ public class FloatMenuOptionProvider_UnloadInventory: FloatMenuOptionProvider
 
 		return new FloatMenuOption("PUAH.UnloadInventory".Translate(), () =>
 		{
-			foreach (var pawn in context.ValidSelectedPawns)
+			// ValidSelectedPawns is not valid in the call back, and the valid state may change between opening the right-click menu and triggering the action
+			foreach (var pawn in context.allSelectedPawns)
 			{
-				if (!pawn.isAutoUnloadInventoryAllowed() || (pawn.HauledToInventoryComp()?.IsEmpty() ?? true))
+				if (!SelectedPawnValid(pawn, context))
 				{
 					continue;
 				}
