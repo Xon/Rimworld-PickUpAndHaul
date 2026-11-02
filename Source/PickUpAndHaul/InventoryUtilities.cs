@@ -67,6 +67,8 @@ public static class InventoryUtilities
 			{
 				countToPickUp = CompatHelper.CanFitInInventory(pawn, thing);
 			}
+			// non-player pawns might have reduced the stack-count
+			countToPickUp = Mathf.Min(countToPickUp, thing.stackCount);
 			if (countToPickUp <= 0)
 			{
 				remainingToPickup = 0;
