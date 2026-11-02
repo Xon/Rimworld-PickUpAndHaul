@@ -20,6 +20,7 @@
 	<PUAH.stashOnMiningFinish>Auto-stash mining output</PUAH.stashOnMiningFinish>
 	<PUAH.stashOnMiningFinishTooltip>Attempts to stash into inventory various results of mining</PUAH.stashOnMiningFinishTooltip>
 	<PUAH.DropThing>Drop (pending)</PUAH.DropThing>
+	<PUAH.UnloadInventory>Unload inventory</PUAH.UnloadInventory>
 	<PUAH.minimumFreeInventorySpace>Minimum free inventory space to consider hauling to inventory</PUAH.minimumFreeInventorySpace>
 	<PUAH.minimumFreeInventorySpaceTooltip>Pawns with less free inventory space than defined here just directly use vanilla hauling. 0% makes them always try hauling to inventory, regardless of them having room for more than one potato or not. 100% results in PUAH requiring pawns to be completely naked. Default 20%</PUAH.minimumFreeInventorySpaceTooltip>
 </LanguageData>
