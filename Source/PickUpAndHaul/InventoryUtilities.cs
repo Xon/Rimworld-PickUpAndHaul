@@ -23,7 +23,7 @@ public static class InventoryUtilities
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public bool HasHauledThingInInventory(Thing thing)
 		{
-			return pawn?.TryGetComp<CompHauledToInventory>()?.Contains(thing) ?? false;
+			return pawn.HauledToInventoryComp()?.Contains(thing) ?? false;
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
