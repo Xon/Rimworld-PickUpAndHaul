@@ -123,7 +123,7 @@ public class WorkGiver_HaulToInventory : WorkGiver_HaulGeneral
 			return HaulAIUtility.HaulToStorageJob(pawn, thing, forced);
 		}
 
-		var job = JobMaker.MakeJob(JobDefOfs.HaulToInventory, null, storeTarget);   //Things will be in queues
+		var job = JobMaker.MakeJob(JobDefOfs.HaulToInventory);   //Things will be in queues
 		Log.Message($"-------------------------------------------------------------------");
 		Log.Message($"------------------------------------------------------------------");//different size so the log doesn't count it 2x
 		Log.Message($"{pawn} job found to haul: {thing} to {storeTarget}:{capacityStoreCell}, looking for more now");
@@ -134,6 +134,8 @@ public class WorkGiver_HaulToInventory : WorkGiver_HaulGeneral
 		job.targetQueueA = new List<LocalTargetInfo>(); //more things
 		job.targetQueueB = new List<LocalTargetInfo>(); //more storage; keep in mind the job doesn't use it, but reserve it so you don't over-haul
 		job.countQueue = new List<int>();//thing counts
+		// 1st destination should be in the destination list for consistent reserve handling (and later counts handling)
+		job.targetQueueB.Add(storeTarget);
 
 		var ceOverweight = false;
 
