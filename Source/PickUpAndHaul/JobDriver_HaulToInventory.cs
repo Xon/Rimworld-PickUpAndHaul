@@ -8,6 +8,7 @@ public class JobDriver_HaulToInventory : JobDriver
 		Log.Message($"{pawn} starting HaulToInventory job: {job.targetQueueA.ToStringSafeEnumerable()}:{job.countQueue.ToStringSafeEnumerable()}");
 		pawn.ReserveAsManyAsPossible(job.targetQueueA, job);
 		pawn.ReserveAsManyAsPossible(job.targetQueueB, job);
+		pawn.Reserve(job.targetB, job, errorOnFailed: false);
 		return true;
 	}
 
