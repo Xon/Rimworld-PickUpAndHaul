@@ -15,15 +15,18 @@ public class JobDriver_HaulToInventory : JobDriver
 	public override IEnumerable<Toil> MakeNewToils()
 	{
 		var wait = Toils_General.Wait(2);
-
+		var skipLoading = finishedLoadingToil();
 		var pruneQueue = PruneQueue(TargetIndex.A);
+
 		yield return pruneQueue;
+		yield return Toils_Jump.JumpIf(skipLoading, () => job.targetQueueA.NullOrEmpty());
 		yield return Toils_JobTransforms.ExtractNextTargetFromQueue(TargetIndex.A); //also does count
 
 		yield return CheckForOverencumberedForCombatExtended();
 		yield return GotoThing();
 		yield return TakeThing();
 		yield return Toils_Jump.JumpIf(pruneQueue, () => !job.targetQueueA.NullOrEmpty());
+		yield return skipLoading;
 
 		// This causes vast amounts of over-fetching due to a lack of reservations, disable until it can be debugged/fixed/removed
         // This is currently loadbearing for hauling more than 1 stack of things to the same destination due to TryFindBestBetterStorageFor only visiting a destination once
@@ -38,6 +41,14 @@ public class JobDriver_HaulToInventory : JobDriver
 
 		yield return NextJob();
 		yield return wait;
+	}
+
+	protected Toil finishedLoadingToil()
+	{
+		return new Toil
+		{
+			debugName = nameof(finishedLoadingToil),
+		};
 	}
 
 	protected Toil PruneQueue(TargetIndex ind)
