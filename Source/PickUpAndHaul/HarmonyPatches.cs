@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using HarmonyLib;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;

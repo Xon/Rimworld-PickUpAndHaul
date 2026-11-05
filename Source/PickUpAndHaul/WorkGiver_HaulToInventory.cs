@@ -1,4 +1,3 @@
-﻿using System.Linq;
 
 namespace PickUpAndHaul;
 public class WorkGiver_HaulToInventory : WorkGiver_HaulGeneral

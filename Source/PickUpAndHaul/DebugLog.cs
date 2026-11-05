@@ -1,4 +1,4 @@
-﻿namespace PickUpAndHaul
+namespace PickUpAndHaul
 {
 	static class Log
 	{

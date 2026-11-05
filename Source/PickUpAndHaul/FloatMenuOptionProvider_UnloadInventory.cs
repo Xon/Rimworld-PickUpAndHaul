@@ -1,4 +1,4 @@
-﻿namespace PickUpAndHaul;
+namespace PickUpAndHaul;
 
 public class FloatMenuOptionProvider_UnloadInventory: FloatMenuOptionProvider
 {

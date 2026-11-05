@@ -1,6 +1,10 @@
 # Remove the line below if you want to inherit .editorconfig settings from higher directories
 root = true
 
+# Specify UTF-8 without byte-order mark
+[*.{csproj,cs,xml,md,sln,slnx}]
+charset = utf-8
+
 [*.xml]
 indent_size = 4
 indent_style = tab
