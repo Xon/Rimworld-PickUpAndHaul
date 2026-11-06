@@ -11,7 +11,7 @@ public partial class WorkGiver_HaulToInventory
 	}
 
 	[Obsolete]
-	public static bool IsNotCorpseOrAllowed(Thing t) => Settings.AllowCorpses || t is not Corpse;
+	public static bool IsNotCorpseOrAllowed(Thing t) => t.IsNotCorpseOrAllowed();
 
 	[Obsolete]
 	private static ThingPositionComparer Comparer { get; } = new();
@@ -27,5 +27,5 @@ public partial class WorkGiver_HaulToInventory
 public static class PickUpAndHaulDesignationDefOf
 {
 	[Obsolete]
-	public static DesignationDef haulUrgently = DefDatabase<DesignationDef>.GetNamedSilentFail("HaulUrgentlyDesignation");
+	public static DesignationDef haulUrgently = DesignationDefs.HaulUrgentlyDesignation;
 }
