@@ -85,6 +85,7 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 				{
 					Log.Message($"{pawn} incapable of hauling, dropping {thing}:{thing.stackCount}");
 					DropThing(thing, thing.stackCount);
+					EndJobWith(JobCondition.Incompletable);
 					return;
 				}
 
