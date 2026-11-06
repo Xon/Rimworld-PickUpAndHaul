@@ -29,3 +29,13 @@ public static class PickUpAndHaulDesignationDefOf
 	[Obsolete]
 	public static DesignationDef haulUrgently = DesignationDefs.HaulUrgentlyDesignation;
 }
+
+[Obsolete]
+public static class PickUpAndHaulJobDefOf
+{
+	[Obsolete]
+	public static JobDef UnloadYourHauledInventory = JobDefOfs.UnloadYourHauledInventory;
+
+	[Obsolete]
+	public static JobDef HaulToInventory = JobDefOfs.HaulToInventory;
+}
