@@ -91,15 +91,14 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 				if (!pawn.health.capacities.CapableOf(PawnCapacityDefOf.Manipulation) || !thing.def.EverStorable(false))
 				{
 					Log.Message($"{pawn} incapable of hauling, dropping {thing}:{thing.stackCount}");
-					pawn.inventory.innerContainer.TryDrop(thing, ThingPlaceMode.Near, _countToDrop, out thing);
+					DropThing(thing, thing.stackCount);
+					return;
 				}
-				else
-				{
-					pawn.inventory.innerContainer.TryTransferToContainer(thing, pawn.carryTracker.innerContainer,
-						_countToDrop, out thing);
-					job.count = _countToDrop;
-					job.SetTarget(TargetIndex.A, thing);
-				}
+
+				pawn.inventory.innerContainer.TryTransferToContainer(thing, pawn.carryTracker.innerContainer,
+					_countToDrop, out thing);
+				job.count = _countToDrop;
+				job.SetTarget(TargetIndex.A, thing);
 
 				if (ModCompatibilityCheck.CombatExtendedIsActive)
 				{
@@ -118,8 +117,10 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 			debugName = nameof(FindTargetOrDrop),
 			initAction = () =>
 			{
-				var unloadableThing = FirstUnloadableThingWithDestination(pawn, hauledToInventoryComp, out var cell, out var destination);
+				// ensure the next toil skips things
+				job.SetTarget(TargetIndex.A, null);
 
+				var unloadableThing = FirstUnloadableThingWithDestination(pawn, hauledToInventoryComp, out var cell, out var destination);
 				if (unloadableThing.count == 0)
 				{
 					if (hauledToInventoryComp.IsEmpty())
@@ -129,35 +130,70 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 					return;
 				}
 
-				if (destination != null || cell != IntVec3.Invalid)
+				var doReservation = true;
+				switch (destination)
 				{
-					job.SetTarget(TargetIndex.A, unloadableThing.Thing);
-					if (cell == IntVec3.Invalid)
-					{
-						job.SetTarget(TargetIndex.B, destination as Thing);
-					}
-					else
-					{
-						job.SetTarget(TargetIndex.B, cell);
-					}
-
-					Log.Message($"{pawn} found destination {job.targetB} for thing {unloadableThing.Thing}:{unloadableThing.count}");
-					if (!pawn.Map.reservationManager.Reserve(pawn, job, job.targetB, errorOnFailed: false))
-					{
-						Log.Message(
-							$"{pawn} failed reserving destination {job.targetB}, dropping {unloadableThing.Thing}:{unloadableThing.count}");
-						pawn.inventory.innerContainer.TryDrop(unloadableThing.Thing, ThingPlaceMode.Near,
-							unloadableThing.count, out _);
+					case null when cell == IntVec3.Invalid:
+						Log.Message($"{pawn} unable to find hauling destination, dropping {unloadableThing.Thing}:{unloadableThing.count}");
+						DropThing(unloadableThing.Thing, unloadableThing.count);
 						return;
+					case Thing thingDest:
+					{
+						job.SetTarget(TargetIndex.B, thingDest);
+						if (thingDest is IHaulEnroute container)
+						{
+							doReservation = false;
+							if (job.playerForced && container.GetSpaceRemainingWithEnroute(unloadableThing.Thing.def) == 0)
+							{
+								container.Map.enrouteManager.InterruptEnroutePawns(container, pawn);
+							}
+							var num = Mathf.Min(unloadableThing.count, container.GetSpaceRemainingWithEnroute(unloadableThing.Thing.def));
+							if (num > 0)
+							{
+								container.Map.enrouteManager.AddEnroute(container, pawn, TargetThingA.def, num);
+							}
+							unloadableThing.count = num;
+						}
+						else
+						{
+							var thingOwner = thingDest.TryGetInnerInteractableThingOwner();
+							if (thingOwner  == null)
+							{
+								Log.Message($"{pawn} tried to store {unloadableThing.Thing} into {thingDest} but it doesn't have an inventory");
+								DropThing(unloadableThing.Thing, unloadableThing.count);
+								return;
+							}
+							unloadableThing.count = Mathf.Min(unloadableThing.thing.stackCount, thingOwner.GetCountCanAccept(unloadableThing.thing));
+						}
+						break;
 					}
-					_countToDrop = unloadableThing.count;
+					default:
+						job.SetTarget(TargetIndex.B, cell);
+						break;
+				}
+
+				if (doReservation && !pawn.Map.reservationManager.Reserve(pawn, job, job.targetB, errorOnFailed: false))
+				{
+					Log.Message($"{pawn} failed reserving destination {job.targetB}, dropping {unloadableThing.Thing}:{unloadableThing.count}");
+					DropThing(unloadableThing.Thing, unloadableThing.count);
 					return;
 				}
 
-				Log.Message($"{pawn} unable to find hauling destination, dropping {unloadableThing.Thing}:{unloadableThing.count}");
-				pawn.inventory.innerContainer.TryDrop(unloadableThing.Thing, ThingPlaceMode.Near, unloadableThing.count, out _);
+				Log.Message($"{pawn} found destination {job.targetB} for thing {unloadableThing.Thing}:{unloadableThing.count}");
+				job.SetTarget(TargetIndex.A, unloadableThing.Thing);
+
+				_countToDrop = unloadableThing.count;
 			}
 		};
+	}
+
+	private void DropThing(Thing thing, int count)
+	{
+		pawn.inventory.innerContainer.TryDrop(thing, ThingPlaceMode.Near, count, out _);
+		if (ModCompatibilityCheck.CombatExtendedIsActive)
+		{
+			CompatHelper.UpdateInventory(pawn);
+		}
 	}
 
 	private static ThingCount FirstUnloadableThingWithDestination(Pawn pawn, CompHauledToInventory hauledToInventoryComp, out IntVec3 foundCell, out IHaulDestination foundDestination)
@@ -180,7 +216,7 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 		foreach (var thing in pendingDrops.OrderBy(t => t.def.FirstThingCategory?.index ?? -1).ThenBy(x => x.def.defName))
 		{
 			Thing candidate;
-			if (inventory.Contains(thing))
+			if (inventory.Contains(thing) && !thing.Destroyed)
 			{
 				candidate = thing;
 			}
