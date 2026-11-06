@@ -1,7 +1,7 @@
 using System.Linq;
 
 namespace PickUpAndHaul;
-public class WorkGiver_HaulToInventory : WorkGiver_HaulGeneral
+public partial class WorkGiver_HaulToInventory : WorkGiver_HaulGeneral
 {
 	//Thanks to AlexTD for the more dynamic search range
 	//And queueing
@@ -44,13 +44,13 @@ public class WorkGiver_HaulToInventory : WorkGiver_HaulGeneral
 				list.Add(thing);
 			}
 		}
-		Comparer.rootCell = pawn.Position;
-		list.Sort(Comparer);
+		ReverseComparer.rootCell = pawn.Position;
+		list.Sort(ReverseComparer);
 		return list;
 	}
 
-	private static ThingPositionComparer Comparer { get; } = new();
-	public class ThingPositionComparer : IComparer<Thing>
+	private static ReverseThingPositionComparer ReverseComparer { get; } = new();
+	public class ReverseThingPositionComparer : IComparer<Thing>
 	{
 		public IntVec3 rootCell;
 		public int Compare(Thing x, Thing y) => (y.Position - rootCell).LengthHorizontalSquared.CompareTo((x.Position - rootCell).LengthHorizontalSquared);
