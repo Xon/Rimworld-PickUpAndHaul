@@ -35,8 +35,9 @@ public class WorkGiver_HaulToInventory : WorkGiver_HaulGeneral
 	/// </summary>
 	public static List<Thing> SortedHaulables(Pawn pawn)
 	{
-		var list = new List<Thing>();
-		foreach (var thing in pawn.Map.listerHaulables.ThingsPotentiallyNeedingHauling())
+		var source = pawn.Map.listerHaulables.ThingsPotentiallyNeedingHauling();
+		var list = new List<Thing>(source.Count);
+		foreach (var thing in source)
 		{
 			if (thing.Spawned)
 			{
