@@ -4,14 +4,7 @@ namespace PickUpAndHaul;
 
 public class JobDriver_UnloadYourHauledInventory : JobDriver
 {
-	private int _countToDrop = -1;
 	private int _unloadDuration = 3;
-
-	public override void ExposeData()
-	{
-		base.ExposeData();
-		Scribe_Values.Look<int>(ref _countToDrop, "countToDrop", -1);
-	}
 
 	public override bool TryMakePreToilReservations(bool errorOnFailed) => true;
 
@@ -95,9 +88,7 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 					return;
 				}
 
-				pawn.inventory.innerContainer.TryTransferToContainer(thing, pawn.carryTracker.innerContainer,
-					_countToDrop, out thing);
-				job.count = _countToDrop;
+				pawn.inventory.innerContainer.TryTransferToContainer(thing, pawn.carryTracker.innerContainer, job.count, out thing);
 				job.SetTarget(TargetIndex.A, thing);
 
 				if (ModCompatibilityCheck.CombatExtendedIsActive)
@@ -119,6 +110,7 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 			{
 				// ensure the next toil skips things
 				job.SetTarget(TargetIndex.A, null);
+				job.count = 0;
 
 				var unloadableThing = FirstUnloadableThingWithDestination(pawn, hauledToInventoryComp, out var cell, out var destination);
 				if (unloadableThing.count == 0)
@@ -181,8 +173,7 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 
 				Log.Message($"{pawn} found destination {job.targetB} for thing {unloadableThing.Thing}:{unloadableThing.count}");
 				job.SetTarget(TargetIndex.A, unloadableThing.Thing);
-
-				_countToDrop = unloadableThing.count;
+				job.count = unloadableThing.count;
 			}
 		};
 	}
