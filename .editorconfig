@@ -147,7 +147,6 @@ csharp_style_prefer_pattern_matching = true:silent
 
 # Code-block preferences
 #IDE0011
-csharp_prefer_braces = true:error
 #IDE0063
 csharp_prefer_simple_using_statement = true
 
