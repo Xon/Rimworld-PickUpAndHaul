@@ -1,6 +1,7 @@
-using System.Linq;
 using System.Runtime.CompilerServices;
-using Unity.Mathematics;
+#if Waylith
+using Waylith.Injection;
+#endif
 
 namespace PickUpAndHaul;
 
@@ -14,10 +15,29 @@ public static class InventoryUtilities
 
 	extension(Pawn pawn)
 	{
+#if Waylith
+		[InjectedField]
+		public CompHauledToInventory HauledToInventoryCompField
+		{
+			get => null;
+			set => throw new NotImplementedException();
+		}
+#endif
+
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public CompHauledToInventory HauledToInventoryComp()
 		{
+#if Waylith
+			if (pawn == null)
+			{
+				return null;
+			}
+
+			pawn.HauledToInventoryCompField ??= pawn.TryGetComp<CompHauledToInventory>();
+			return pawn.HauledToInventoryCompField;
+#else
 			return pawn?.TryGetComp<CompHauledToInventory>();
+#endif
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
