@@ -91,7 +91,7 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 				if (!pawn.health.capacities.CapableOf(PawnCapacityDefOf.Manipulation) || !thing.def.EverStorable(false))
 				{
 					Log.Message($"{pawn} incapable of hauling, dropping {thing}:{thing.stackCount}");
-					pawn.inventory.innerContainer.TryDrop(thing, ThingPlaceMode.Near, _countToDrop, out thing);
+					pawn.TryDropThing(thing, _countToDrop);
 				}
 				else
 				{
@@ -105,8 +105,6 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 				{
 					CompatHelper.UpdateInventory(pawn);
 				}
-
-				thing.SetForbidden(false, false);
 			}
 		};
 	}
@@ -146,8 +144,7 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 					{
 						Log.Message(
 							$"{pawn} failed reserving destination {job.targetB}, dropping {unloadableThing.Thing}:{unloadableThing.count}");
-						pawn.inventory.innerContainer.TryDrop(unloadableThing.Thing, ThingPlaceMode.Near,
-							unloadableThing.count, out _);
+						pawn.TryDropThing(unloadableThing.Thing, unloadableThing.count);
 						return;
 					}
 					_countToDrop = unloadableThing.count;
@@ -155,7 +152,7 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 				}
 
 				Log.Message($"{pawn} unable to find hauling destination, dropping {unloadableThing.Thing}:{unloadableThing.count}");
-				pawn.inventory.innerContainer.TryDrop(unloadableThing.Thing, ThingPlaceMode.Near, unloadableThing.count, out _);
+				pawn.TryDropThing(unloadableThing.Thing, unloadableThing.count);
 			}
 		};
 	}

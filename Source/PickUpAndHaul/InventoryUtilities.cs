@@ -105,5 +105,15 @@ public static class InventoryUtilities
 
 			return true;
 		}
+
+		public void TryDropThing(Thing thing, int count)
+		{
+			pawn.inventory.innerContainer.TryDrop(thing, ThingPlaceMode.Near, count, out thing);
+			thing.SetForbidden(false, false);
+			if (ModCompatibilityCheck.CombatExtendedIsActive)
+			{
+				CompatHelper.UpdateInventory(pawn);
+			}
+		}
 	}
 }
