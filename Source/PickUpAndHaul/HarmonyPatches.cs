@@ -3,6 +3,8 @@ using HarmonyLib;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Emit;
+using Verse.AI.Group;
+
 namespace PickUpAndHaul;
 [StaticConstructorOnStartup]
 [SuppressMessage("ReSharper", "InconsistentNaming", Justification = "Harmony magic paramter names")]
@@ -205,7 +207,13 @@ static class HarmonyPatches
 		}
 	}
 
-	public static void Idle_Postfix(Pawn pawn) => pawn.CheckIfPawnShouldUnloadInventory(true);
+	public static void Idle_Postfix(Pawn pawn)
+	{
+		if (pawn?.GetLord() == null)
+		{
+			pawn.CheckIfPawnShouldUnloadInventory(true);
+		}
+	}
 
 	public static void DropUnusedInventory_PostFix(Pawn pawn) => pawn.CheckIfPawnShouldUnloadInventory();
 
