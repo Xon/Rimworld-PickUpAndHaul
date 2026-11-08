@@ -488,6 +488,8 @@ static class HarmonyPatches
 	{
 		var matcher = new CodeMatcher(instructions);
 
+		// Matches;
+		//	return bill.Map.resourceCounter.GetCount(thingDefCountClass.thingDef) + GetCarriedCount(bill, thingDef);
 		matcher.MatchEndForward([
 			new CodeMatch(OpCodes.Ldarg_1),
 			new CodeMatch(OpCodes.Callvirt),
@@ -504,13 +506,15 @@ static class HarmonyPatches
 		])
 		.ThrowIfInvalid("Unable to find entry point for patching bill item count");
 
+		// inject;
+		//	+ AddCountForPending(worker, bill)
 		matcher.Insert([
 			new CodeInstruction(OpCodes.Ldarg_0),
 			new CodeInstruction(OpCodes.Ldarg_1),
 			new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Bill_Count), nameof(Bill_Count.AddCountForPending))),
 			new CodeInstruction(OpCodes.Add)
 		]);
-		
+
 		return matcher.Instructions();
 	}
 
