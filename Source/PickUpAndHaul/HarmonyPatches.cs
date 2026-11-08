@@ -504,7 +504,7 @@ static class HarmonyPatches
 			new CodeMatch(OpCodes.Add),
 			new CodeMatch(OpCodes.Ret)
 		])
-		.ThrowIfInvalid("Unable to find entry point for patching bill item count");
+		.ThrowIfInvalid("[PickUpAndHaul] Unable to find entry point for patching bill item count");
 
 		// inject;
 		//	+ AddCountForPending(worker, bill, false)
