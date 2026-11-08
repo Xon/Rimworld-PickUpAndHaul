@@ -112,6 +112,10 @@ static class HarmonyPatches
 			ApplyTranspilerForEnumerationMethods(harmony, type, methodPrefix, placeItemInInventoryTranspiler, featureFlag);
 		}
 
+		harmony.Patch(
+			original: AccessTools.Method(typeof(RecipeWorkerCounter), nameof(RecipeWorkerCounter.CountProducts)),
+			transpiler: new HarmonyMethod(typeof(HarmonyPatches), nameof(AddPendingDropsToBillCount)));
+
 		Verse.Log.Message("PickUpAndHaul v1.1.2¼ welcomes you to RimWorld with pointless logspam.");
 	}
 
@@ -479,5 +483,35 @@ static class HarmonyPatches
 
 	private static IEnumerable<CodeInstruction> StashInventoryOnPlaceTranspiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator, MethodBase original)
 		=> multiMethodReplacer(instructions, generator, original, nameof(GenPlace.TryPlaceThing), StashInventoryOnJob, CurrentFeatureFlag, StashOnPlacePatcher);
+
+	private static IEnumerable<CodeInstruction> AddPendingDropsToBillCount(IEnumerable<CodeInstruction> instructions)
+	{
+		var matcher = new CodeMatcher(instructions);
+
+		matcher.MatchEndForward([
+			new CodeMatch(OpCodes.Ldarg_1),
+			new CodeMatch(OpCodes.Callvirt),
+			new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(Map), nameof(Map.resourceCounter))),
+			new CodeMatch(OpCodes.Ldloc_0),
+			new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(ThingDefCountClass), nameof(ThingDefCountClass.thingDef))),
+			new CodeMatch(OpCodes.Callvirt),
+			new CodeMatch(OpCodes.Ldarg_0),
+			new CodeMatch(OpCodes.Ldarg_1),
+			new CodeMatch(OpCodes.Ldloc_1),
+			new CodeMatch(OpCodes.Call),
+			new CodeMatch(OpCodes.Add),
+			new CodeMatch(OpCodes.Ret)
+		])
+		.ThrowIfInvalid("Unable to find entry point for patching bill item count");
+
+		matcher.Insert([
+			new CodeInstruction(OpCodes.Ldarg_0),
+			new CodeInstruction(OpCodes.Ldarg_1),
+			new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Bill_Count), nameof(Bill_Count.AddCountForPending))),
+			new CodeInstruction(OpCodes.Add)
+		]);
+		
+		return matcher.Instructions();
+	}
 
 }
