@@ -92,14 +92,13 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 				{
 					Log.Message($"{pawn} incapable of hauling, dropping {thing}:{thing.stackCount}");
 					pawn.TryDropThing(thing, _countToDrop);
+					EndJobWith(JobCondition.Incompletable);
+					return;
 				}
-				else
-				{
-					pawn.inventory.innerContainer.TryTransferToContainer(thing, pawn.carryTracker.innerContainer,
-						_countToDrop, out thing);
-					job.count = _countToDrop;
-					job.SetTarget(TargetIndex.A, thing);
-				}
+
+				pawn.inventory.innerContainer.TryTransferToContainer(thing, pawn.carryTracker.innerContainer, _countToDrop, out thing);
+				job.count = _countToDrop;
+				job.SetTarget(TargetIndex.A, thing);
 
 				CompatHelper.UpdateInventory(pawn);
 			}
