@@ -507,10 +507,11 @@ static class HarmonyPatches
 		.ThrowIfInvalid("Unable to find entry point for patching bill item count");
 
 		// inject;
-		//	+ AddCountForPending(worker, bill)
+		//	+ AddCountForPending(worker, bill, false)
 		matcher.Insert([
 			new CodeInstruction(OpCodes.Ldarg_0),
 			new CodeInstruction(OpCodes.Ldarg_1),
+			new CodeInstruction(OpCodes.Ldc_I4_0),
 			new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Bill_Count), nameof(Bill_Count.AddCountForPending))),
 			new CodeInstruction(OpCodes.Add)
 		]);

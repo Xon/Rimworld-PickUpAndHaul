@@ -2,12 +2,17 @@ namespace PickUpAndHaul;
 
 public static class Bill_Count
 {
-	public static int AddCountForPending(RecipeWorkerCounter worker, Bill_Production bill)
+	public static int AddCountForPending(RecipeWorkerCounter worker, Bill_Production bill, bool onlyMechs)
 	{
 		var count = 0;
 		var thingDef = worker.recipe.products[0].thingDef;
 		foreach (var pawn in bill.Map.mapPawns.SpawnedPawnsInFaction(Faction.OfPlayer))
 		{
+			if (onlyMechs && !pawn.IsColonyMech)
+			{
+				continue;
+			}
+
 			var comp = pawn.HauledToInventoryComp();
 			foreach (var thing in pawn.inventory.innerContainer)
 			{
