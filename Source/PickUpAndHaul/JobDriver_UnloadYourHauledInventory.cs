@@ -22,9 +22,9 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 		var begin = Toils_General.Wait(_unloadDuration);
 		yield return begin;
 
-		var HauledToInventoryComp = pawn.HauledToInventoryComp();
-		yield return FindTargetOrDrop(HauledToInventoryComp);
-		yield return PullItemFromInventory(HauledToInventoryComp, begin);
+		var hauledToInventoryComp = pawn.HauledToInventoryComp();
+		yield return FindTargetOrDrop(hauledToInventoryComp);
+		yield return PullItemFromInventory(begin);
 
 		var releaseReservation = ReleaseReservation();
 		var carryToCell = Toils_Haul.CarryHauledThingToCell(TargetIndex.B);
@@ -67,7 +67,7 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 		};
 	}
 
-	private Toil PullItemFromInventory(CompHauledToInventory hauledToInventoryComp, Toil wait)
+	private Toil PullItemFromInventory(Toil wait)
 	{
 		return new()
 		{
@@ -88,7 +88,14 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 					return;
 				}
 
-				pawn.inventory.innerContainer.TryTransferToContainer(thing, pawn.carryTracker.innerContainer, job.count, out var carriedThing);
+				var carriedThing = pawn.carryTracker.CarriedThing;
+				if (carriedThing != null)
+				{
+					Log.Message($"{pawn} is already carrying {carriedThing}:{carriedThing.stackCount}, dropping");
+					pawn.carryTracker.TryDropCarriedThing(pawn.Position, ThingPlaceMode.Near, out _);
+				}
+
+				pawn.inventory.innerContainer.TryTransferToContainer(thing, pawn.carryTracker.innerContainer, job.count, out carriedThing);
 				if (carriedThing == null)
 				{
 					Log.Message($"{pawn} Failed to move {thing}:{job.count} into hands");
