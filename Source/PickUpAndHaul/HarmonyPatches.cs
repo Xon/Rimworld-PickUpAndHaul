@@ -115,6 +115,12 @@ static class HarmonyPatches
 		harmony.Patch(
 			original: AccessTools.Method(typeof(RecipeWorkerCounter), nameof(RecipeWorkerCounter.CountProducts)),
 			transpiler: new HarmonyMethod(typeof(HarmonyPatches), nameof(AddPendingDropsToBillCount)));
+		harmony.Patch(
+			original: AccessTools.Method(typeof(RecipeWorkerCounter_MakeStoneBlocks), nameof(RecipeWorkerCounter_MakeStoneBlocks.CountProducts)),
+			transpiler: new HarmonyMethod(typeof(HarmonyPatches), nameof(AddPendingDropsToThingDefBillCount)));
+		harmony.Patch(
+			original: AccessTools.Method(typeof(RecipeWorkerCounter_ButcherAnimals), nameof(RecipeWorkerCounter_ButcherAnimals.CountProducts)),
+			transpiler: new HarmonyMethod(typeof(HarmonyPatches), nameof(AddPendingDropsToThingDefBillCount)));
 
 		Verse.Log.Message("PickUpAndHaul v1.1.2¼ welcomes you to RimWorld with pointless logspam.");
 	}
@@ -484,7 +490,7 @@ static class HarmonyPatches
 	private static IEnumerable<CodeInstruction> StashInventoryOnPlaceTranspiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator, MethodBase original)
 		=> multiMethodReplacer(instructions, generator, original, nameof(GenPlace.TryPlaceThing), StashInventoryOnJob, CurrentFeatureFlag, StashOnPlacePatcher);
 
-	private static IEnumerable<CodeInstruction> AddPendingDropsToBillCount(IEnumerable<CodeInstruction> instructions)
+	private static IEnumerable<CodeInstruction> AddPendingDropsToBillCount(IEnumerable<CodeInstruction> instructions, MethodBase original)
 	{
 		var matcher = new CodeMatcher(instructions);
 
@@ -543,7 +549,7 @@ static class HarmonyPatches
 		matcher.Advance(2);
 		if (matcher.Opcode != OpCodes.Brfalse)
 		{
-			Verse.Log.Error($"[PickUpAndHaul] Broken transpiler in {nameof(AddPendingDropsToBillCount)}");
+			Verse.Log.Error($"[PickUpAndHaul] Broken transpiler in {nameof(AddPendingDropsToBillCount)}, found {matcher.Opcode}");
 			return matcher.Instructions();
 		}
 
@@ -559,7 +565,43 @@ static class HarmonyPatches
 			new CodeInstruction(OpCodes.Stloc_2)
 		);
 
+		Log.Message($"[PickUpAndHaul] Patched {original.DeclaringType}:{original.Name} to call {nameof(Bill_Count.AddCountForPending)}");
 		return matcher.Instructions();
 	}
 
+	private static IEnumerable<CodeInstruction> AddPendingDropsToThingDefBillCount(IEnumerable<CodeInstruction> instructions, MethodBase original)
+	{
+		var matcher = new CodeMatcher(instructions);
+
+		// Matches;
+		//	return num;
+		matcher.MatchEndForward([
+			new CodeMatch(OpCodes.Ldc_I4_0),
+			new CodeMatch(OpCodes.Stloc_0),
+			new CodeMatch(OpCodes.Ldsfld),
+			new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(ThingCategoryDef), nameof(ThingCategoryDef.childThingDefs))),
+			new CodeMatch(OpCodes.Stloc_1),
+			new CodeMatch(OpCodes.Ldc_I4_0)
+		]);
+		if (matcher.IsInvalid)
+		{
+			// Using ThrowIfInvalid breaks patching for the entire method which gives false positives for other mods
+			Verse.Log.Error($"[PickUpAndHaul] Failed to patch {original.DeclaringType}:{original.Name} to call {nameof(Bill_Count.AddCountForPendingByThingDefs)}");
+			return matcher.Instructions();
+		}
+
+		// inject;
+		//	num = num + AddCountForPendingByThingDefs(bill, childThingDefs)
+		matcher.Insert([
+			new CodeInstruction(OpCodes.Ldarg_0),
+			new CodeInstruction(OpCodes.Ldloc_1),
+			new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Bill_Count), nameof(Bill_Count.AddCountForPendingByThingDefs))),
+			new CodeInstruction(OpCodes.Ldloc_0),
+			new CodeInstruction(OpCodes.Add),
+			new CodeInstruction(OpCodes.Stloc_0)
+		]);
+
+		Log.Message($"[PickUpAndHaul] Patched {original.DeclaringType}:{original.Name} to call {nameof(Bill_Count.AddCountForPendingByThingDefs)}");
+		return matcher.Instructions();
+	}
 }

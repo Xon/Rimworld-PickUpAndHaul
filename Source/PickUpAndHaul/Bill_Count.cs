@@ -24,4 +24,21 @@ public static class Bill_Count
 		}
 		return count;
 	}
+
+	public static int AddCountForPendingByThingDefs(Bill_Production bill, List<ThingDef> thingDefs)
+	{
+		var count = 0;
+		foreach (var pawn in bill.Map.mapPawns.SpawnedPawnsInFaction(Faction.OfPlayer))
+		{
+			var comp = pawn.HauledToInventoryComp();
+			foreach (var thing in pawn.inventory.innerContainer)
+			{
+				if (comp.Contains(thing))
+				{
+					count += thing.stackCount;
+				}
+			}
+		}
+		return count;
+	}
 }
