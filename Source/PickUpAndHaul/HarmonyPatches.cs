@@ -503,18 +503,61 @@ static class HarmonyPatches
 			new CodeMatch(OpCodes.Call),
 			new CodeMatch(OpCodes.Add),
 			new CodeMatch(OpCodes.Ret)
-		])
-		.ThrowIfInvalid("[PickUpAndHaul] Unable to find entry point for patching bill item count");
+		]);
+		if (matcher.IsInvalid)
+		{
+			// Using ThrowIfInvalid breaks patching for the entire method which gives false positives for other mods
+			Verse.Log.Error("[PickUpAndHaul] Unable to find entry point for patching bill item count - patch 1");
+			return matcher.Instructions();
+		}
 
 		// inject;
-		//	+ AddCountForPending(worker, bill, false)
+		//	+ AddCountForPending(false, worker, bill)
 		matcher.Insert([
+			new CodeInstruction(OpCodes.Ldc_I4_0),
 			new CodeInstruction(OpCodes.Ldarg_0),
 			new CodeInstruction(OpCodes.Ldarg_1),
-			new CodeInstruction(OpCodes.Ldc_I4_0),
 			new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Bill_Count), nameof(Bill_Count.AddCountForPending))),
 			new CodeInstruction(OpCodes.Add)
 		]);
+
+		// Matches;
+		//  if (bill.includeEquipped) { foreach ( ... bill.Map.mapPawns.FreeColonistsSpawned)
+		matcher.End().MatchStartBackwards([
+			new CodeMatch(OpCodes.Ldarg_1),
+			new CodeMatch(OpCodes.Ldfld, AccessTools.Field(typeof(Bill_Production), nameof(Bill_Production.includeEquipped))),
+			// insert code here
+			new CodeMatch(OpCodes.Brfalse),
+			new CodeMatch(OpCodes.Ldarg_1),
+		    new CodeMatch(OpCodes.Callvirt, AccessTools.Property(typeof(Bill), nameof(Bill_Production.Map)).GetMethod)
+		]);
+		if (matcher.IsInvalid)
+		{
+			var lastError = Traverse.Create(matcher).Field<string>("lastError").Value;
+			// Using ThrowIfInvalid breaks patching for the entire method which gives false positives for other mods
+			Verse.Log.Error($"[PickUpAndHaul] Unable to find entry point for patching bill item count - patch 2\n{lastError}" );
+			return matcher.Instructions();
+		}
+
+		// before the branch statement
+		matcher.Advance(2);
+		if (matcher.Opcode != OpCodes.Brfalse)
+		{
+			Verse.Log.Error($"[PickUpAndHaul] Broken transpiler in {nameof(AddPendingDropsToBillCount)}");
+			return matcher.Instructions();
+		}
+
+		// inject;
+		//	num2 += AddCountForPending(bill.includeEquipped, worker, bill)
+		matcher.Insert(
+			new CodeInstruction(OpCodes.Dup),
+			new CodeInstruction(OpCodes.Ldarg_0),
+			new CodeInstruction(OpCodes.Ldarg_1),
+			new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Bill_Count), nameof(Bill_Count.AddCountForPending))),
+			new CodeInstruction(OpCodes.Ldloc_2),
+			new CodeInstruction(OpCodes.Add),
+			new CodeInstruction(OpCodes.Stloc_2)
+		);
 
 		return matcher.Instructions();
 	}

@@ -2,7 +2,7 @@ namespace PickUpAndHaul;
 
 public static class Bill_Count
 {
-	public static int AddCountForPending(RecipeWorkerCounter worker, Bill_Production bill, bool onlyMechs)
+	public static int AddCountForPending(bool onlyMechs, RecipeWorkerCounter worker, Bill_Production bill)
 	{
 		var count = 0;
 		var thingDef = worker.recipe.products[0].thingDef;
