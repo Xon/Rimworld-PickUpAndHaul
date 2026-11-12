@@ -41,7 +41,7 @@ public class RegressionTests
 			thing.Destroy();
 		}
 		cleanup.Clear();
-		stockpile.Delete();
+		stockpile?.Delete();
 		stockpile = null;
 	}
 	
