@@ -106,13 +106,24 @@ public static class InventoryUtilities
 			return true;
 		}
 
-		public void TryDropThing(Thing thing, int count)
+		public void TryDropThing(Thing thing, int count, bool forbidden = false)
 		{
 			pawn.inventory.innerContainer.TryDrop(thing, ThingPlaceMode.Near, count, out thing);
-			thing.SetForbidden(false, false);
+			thing.SetForbidden(forbidden, false);
 			if (ModCompatibilityCheck.CombatExtendedIsActive)
 			{
 				CompatHelper.UpdateInventory(pawn);
+			}
+
+			if (forbidden || !thing.Spawned || thing.def.alwaysHaulable || !thing.def.EverHaulable || thing.IsInAnyStorage())
+			{
+				return;
+			}
+
+			var designationManager = thing.Map.designationManager;
+			if (designationManager.DesignationOn(thing, DesignationDefOf.Haul) == null)
+			{
+				designationManager.AddDesignation(new Designation(thing, DesignationDefOf.Haul));
 			}
 		}
 	}
