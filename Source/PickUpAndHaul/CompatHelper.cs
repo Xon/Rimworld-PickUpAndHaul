@@ -29,10 +29,13 @@ internal class CompatHelper
 
 		if (ModCompatibilityCheck.NiceInventoryIsActive)
 		{
-			RecacheInventoryForNiceInventoryTab ??= Traverse.CreateWithType("NiceInventoryTab.ITab_Pawn_Gear_Patch").Field<bool>("shouldRecache");
-			RecacheInventoryForNiceInventoryTab.Value = true;
+			RecacheInventoryForNiceInventoryTab ??= Traverse.CreateWithType("NiceInventoryTab.ITab_Pawn_Gear_Patch").Field("shouldRecache");
+			if (RecacheInventoryForNiceInventoryTab.FieldExists())
+			{
+				RecacheInventoryForNiceInventoryTab.SetValue(true);
+			}
 		}
 	}
 
-	public static Traverse<bool> RecacheInventoryForNiceInventoryTab;
+	public static Traverse RecacheInventoryForNiceInventoryTab;
 }
