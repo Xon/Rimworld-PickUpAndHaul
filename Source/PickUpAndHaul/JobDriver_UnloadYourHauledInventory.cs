@@ -101,10 +101,7 @@ public class JobDriver_UnloadYourHauledInventory : JobDriver
 					job.SetTarget(TargetIndex.A, thing);
 				}
 
-				if (ModCompatibilityCheck.CombatExtendedIsActive)
-				{
-					CompatHelper.UpdateInventory(pawn);
-				}
+				CompatHelper.UpdateInventory(pawn);
 			}
 		};
 	}

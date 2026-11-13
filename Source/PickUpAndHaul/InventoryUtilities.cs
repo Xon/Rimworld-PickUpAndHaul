@@ -96,10 +96,7 @@ public static class InventoryUtilities
 			// the ThingOwner API does not permit determining where the merged stacks went
 			comp.RegisterHauledItem(splitThing);
 
-			if (ModCompatibilityCheck.CombatExtendedIsActive)
-			{
-				CompatHelper.UpdateInventory(pawn);
-			}
+			CompatHelper.UpdateInventory(pawn);
 
 			Log.Message($"{pawn} stash {thing}:{countToPickUp} into inventory");
 
@@ -110,10 +107,7 @@ public static class InventoryUtilities
 		{
 			pawn.inventory.innerContainer.TryDrop(thing, ThingPlaceMode.Near, count, out thing);
 			thing.SetForbidden(forbidden, false);
-			if (ModCompatibilityCheck.CombatExtendedIsActive)
-			{
-				CompatHelper.UpdateInventory(pawn);
-			}
+			CompatHelper.UpdateInventory(pawn);
 
 			if (forbidden || !thing.Spawned || thing.def.alwaysHaulable || !thing.def.EverHaulable || thing.IsInAnyStorage())
 			{

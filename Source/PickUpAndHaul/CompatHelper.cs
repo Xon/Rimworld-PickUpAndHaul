@@ -1,5 +1,9 @@
+using HarmonyLib;
+using System.Diagnostics.CodeAnalysis;
+
 namespace PickUpAndHaul;
 
+[SuppressMessage("ReSharper", "InvertIf")]
 internal class CompatHelper
 {
 	public static bool CeOverweight(Pawn pawn)
@@ -16,8 +20,19 @@ internal class CompatHelper
 		//return countToPickUp;
 	}
 
-	internal static void UpdateInventory(Pawn pawn)
+	public static void UpdateInventory(Pawn pawn)
 	{
-		//pawn.GetComp<CombatExtended.CompInventory>().UpdateInventory();
+		if (ModCompatibilityCheck.CombatExtendedIsActive)
+		{
+			//pawn.GetComp<CombatExtended.CompInventory>().UpdateInventory();
+		}
+
+		if (ModCompatibilityCheck.NiceInventoryIsActive)
+		{
+			RecacheInventoryForNiceInventoryTab ??= Traverse.CreateWithType("NiceInventoryTab.ITab_Pawn_Gear_Patch").Field<bool>("shouldRecache");
+			RecacheInventoryForNiceInventoryTab.Value = true;
+		}
 	}
+
+	public static Traverse<bool> RecacheInventoryForNiceInventoryTab;
 }
